@@ -1,0 +1,140 @@
+import hashlib
+import os
+import sqlite3
+
+# Funktion zur Berechnung der Checksumme einer Datei
+def calculate_checksum(file_path):
+    """
+    Diese Funktion berechnet die SHA-256-Checksumme einer Datei.
+
+    Parameters:
+    file_path (str): Der Pfad zur Datei.
+
+    Returns:
+    str: Die SHA-256-Checksumme der Datei.
+    """
+    with open(file_path, 'rb') as f:
+        checksum = hashlib.sha256()
+        while True:
+            data = f.read(65536)  # Lesen von 64 KB Blöcken
+            if not data:
+                break
+            checksum.update(data)
+    return checksum.hexdigest()
+
+# Funktion zum Vergleichen von zwei Checksummen
+def compare_checksums(original_checksum, current_checksum):
+    """
+    Diese Funktion vergleicht zwei Checksummen, um die Dateiintegrität zu überprüfen.
+
+    Parameters:
+    original_checksum (str): Die ursprüngliche Checksumme der Datei.
+    current_checksum (str): Die aktuelle Checksumme der Datei.
+
+    Returns:
+    bool: True, wenn die Checksummen übereinstimmen, sonst False.
+    """
+    return original_checksum == current_checksum
+
+# Funktion zum Überprüfen der Dateiintegrität
+def check_integrity(file_path, original_checksum):
+    """
+    Diese Funktion überprüft die Integrität einer Datei anhand ihrer Checksumme.
+
+    Parameters:
+    file_path (str): Der Pfad zur Datei.
+    original_checksum (str): Die ursprüngliche Checksumme der Datei.
+
+    Returns:
+    bool: True, wenn die Dateiintegrität intakt ist, sonst False.
+    """
+    current_checksum = calculate_checksum(file_path)
+    return compare_checksums(original_checksum, current_checksum)
+
+# Funktion zur Überprüfung der Version einer Datei
+def check_version(file_path, version):
+    """
+    Diese Funktion überprüft, ob die aktuelle Version einer Datei mit der erwarteten Version übereinstimmt.
+
+    Parameters:
+    file_path (str): Der Pfad zur Datei, deren Version überprüft werden soll.
+    version (str): Die erwartete Version der Datei.
+
+    Returns:
+    bool: True, wenn die Dateiversion übereinstimmt, ansonsten False.
+    """
+    # Zunächst wird geprüft, ob die Datei existiert
+    if not os.path.exists(file_path):
+        raise FileNotFoundError("Die angegebene Datei existiert nicht.")
+
+    # Die Datei mit den Versionsinformationen
+    version_file_path = file_path + ".version"
+
+    # Prüfen, ob die Versionsdatei vorhanden ist
+    if not os.path.exists(version_file_path):
+        # Wenn keine Versionsdatei vorhanden ist, wird die Datei als Version 1.0 betrachtet
+        current_version = "1.0"
+    else:
+        # Wenn die Versionsdatei vorhanden ist, wird die aktuelle Version aus der Datei ausgelesen
+        with open(version_file_path, 'r') as f:
+            current_version = f.read().strip()
+
+    # Überprüfen, ob die aktuelle Version mit der erwarteten Version übereinstimmt
+    if current_version == version:
+        return True
+    else:
+        return False
+
+
+# Funktion zur Benutzerautorisierung
+def authorize(user):
+    """
+    Diese Funktion überprüft, ob ein Benutzer autorisiert ist, eine bestimmte Aktion auszuführen.
+
+    Parameters:
+    user (str): Der Benutzername, der autorisiert werden soll.
+
+    Returns:
+    bool: True, wenn der Benutzer autorisiert ist, ansonsten False.
+    """
+
+    # Dictionary mit Benutzern und deren Rollen/Berechtigungen
+    user_roles = {
+        "admin": ["read", "write", "execute"],
+        "user": ["read"]
+        # Weitere Benutzer und deren Rollen können hier hinzugefügt werden
+    }
+
+    # Prüfen, ob der Benutzer in der Benutzerliste vorhanden ist
+    if user in user_roles:
+        # Hier könnten weitere Logiken implementiert werden, z. B. die Überprüfung von Passwörtern oder Token.
+        # Für dieses Beispiel prüfen wir nur, ob der Benutzer vorhanden ist.
+        return True
+    else:
+        return False
+
+# Hauptfunktion
+def main():
+    file_path = 'example_file.txt'
+    original_checksum = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'  # Beispiel-Checksumme
+
+    # Überprüfen der Autorisierung
+    user = 'admin'  # Beispielbenutzer
+    if not authorize(user):
+        print("Nicht autorisiert")
+        return
+
+    # Überprüfen der Versionskontrolle
+    version = '1.0'  # Beispielversion
+    if not check_version(file_path, version):
+        print("Falsche Version")
+        return
+
+    # Integritätscheck durchführen
+    if check_integrity(file_path, original_checksum):
+        print("Dateiintegrität ist intakt")
+    else:
+        print("Dateiintegrität wurde verletzt")
+
+if __name__ == "__main__":
+    main()
